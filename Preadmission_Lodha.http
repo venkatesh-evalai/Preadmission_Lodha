@@ -1,0 +1,6 @@
+@Preadmission_Lodha_HostAddress = http://localhost:5094
+
+GET {{Preadmission_Lodha_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

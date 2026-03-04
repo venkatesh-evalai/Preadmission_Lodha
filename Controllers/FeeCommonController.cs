@@ -137,7 +137,7 @@ namespace Preadmission_Lodha.Controllers
                        feeRcpt.student_Id, feeRcpt.receipt_Id, feeRcpt.student_Code, feeRcpt.receipt_Code, feeRcpt.receipt_Mode, feeRcpt.cheque_Number, feeRcpt.cheque_Date, feeRcpt.dd_Date,
                        feeRcpt.payment_Date, feeRcpt.bank_Name, feeRcpt.branch_Name, feeRcpt.month_Id, feeRcpt.payable_Amount, feeRcpt.bal_CreditAmount, feeRcpt.balance_Amount,
                        feeRcpt.structure_Amount, feeRcpt.discount_Amount, feeRcpt.receipt_Amount, feeRcpt.receipt_Date, feeRcpt.receipt_Remark, feeRcpt.fine_Amount, feeRcpt.additional_Charge,
-                       feeRcpt.receipt_Cancel, feeRcpt.cancel_Date, feeRcpt.status, feeRcpt.user_Name, feeRcpt.ip_Address, feeRcpt.mode, "crudMonthlyFeeReceiptMaster", "Pro_CRUD_FeeReceiptMaster");
+                       feeRcpt.receipt_Cancel, feeRcpt.cancel_Date, feeRcpt.status??0, feeRcpt.user_Name, feeRcpt.ip_Address, feeRcpt.mode, "crudMonthlyFeeReceiptMaster", "Pro_CRUD_FeeReceiptMaster");
 
             conn.Close();
             if (n > 0) return true;
@@ -468,5 +468,32 @@ namespace Preadmission_Lodha.Controllers
             else return false;
         }
 
+        [HttpPost("crudAccountsPostingNew")]
+        public bool crudAccountsPostingNew(crudAccountsPostingModel AccPo)
+        {
+            SqlConnection conn = new SqlConnection(commonCode.conStr);
+            SqlCommand cmd = new SqlCommand("Pro_CRUD_2024_AccountsPosting_Insertion", conn);
+            cmd.CommandType = CommandType.StoredProcedure;
+            cmd.Parameters.Add("@orgId", SqlDbType.Int).Value = AccPo.org_Id;
+            if (AccPo.receipt_Date != DateTime.MinValue)
+            {
+                cmd.Parameters.Add("@transDate", SqlDbType.DateTime).Value = AccPo.receipt_Date;
+            }
+            cmd.Parameters.Add("@transCode", SqlDbType.Int).Value = AccPo.transCode;
+            cmd.Parameters.Add("@tranType", SqlDbType.NVarChar).Value = AccPo.transType;
+            cmd.Parameters.Add("@accountsCode", SqlDbType.Int).Value = AccPo.accountsCode;
+            cmd.Parameters.Add("@creditAmount", SqlDbType.Decimal).Value = AccPo.credit_Amount;
+            cmd.Parameters.Add("@debitAmount", SqlDbType.Decimal).Value = AccPo.debit_Amount;
+            cmd.Parameters.Add("@paymentCode", SqlDbType.Int).Value = Convert.ToInt32(AccPo.receipt_Code);
+            cmd.Parameters.Add("@customerCode", SqlDbType.Int).Value = AccPo.student_Id;
+            cmd.Parameters.Add("@academicId", SqlDbType.Int).Value = AccPo.academicId;
+            cmd.Parameters.Add("@typeId", SqlDbType.Int).Value = AccPo.typeId;//new
+            cmd.Parameters.Add("@directOrIndirect", SqlDbType.Int).Value = AccPo.directOrIndirect;//new
+            conn.Open();
+            int n = (int)cmd.ExecuteNonQuery();
+            conn.Close();
+            if (n > 0) return true;
+            else return false;
+        }
     }
 }

@@ -2,14 +2,16 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Preadmission_Lodha.Models;
+using Razorpay.Api;
 using SixLabors.ImageSharp;
 using System.Data;
 using System.Net;
-using System.Text;
+using System.Net.Mail;
+using System.Net.Mime;
 using System.Security.Cryptography;
-using static Preadmission_Lodha.Models.PaymentModel;
-using Razorpay.Api;
+using System.Text;
 using System.Text.Json;
+using static Preadmission_Lodha.Models.PaymentModel;
 
 namespace Preadmission_Lodha.Controllers
 {
@@ -152,24 +154,24 @@ namespace Preadmission_Lodha.Controllers
                 }
 
                 data = commonCode.ConvertDataTable<OnlinePayment>(Dt);
-                // if (things[0].org_Id == 212)
-                // {
-                //   data[0].apiKey = "rzp_test_Bfjv3KifmtSU01";
-                //   data[0].salt = "brQ9h8ZDDBjo5wwj5ytMBvh8";
-                //   data[0].provider = "RAZORPAY"; // Example: Use "RAZORPAY" or other if required
-                //  }
+                 if (things[0].org_Id == 212)
+                {
+                    data[0].apiKey = "rzp_test_Bfjv3KifmtSU01";
+                    data[0].salt = "brQ9h8ZDDBjo5wwj5ytMBvh8";
+                    data[0].provider = "RAZORPAY"; // Example: Use "RAZORPAY" or other if required
+                }
 
                 string logFileName = $"RazorpayLogspreinstallment_{things[0].org_Id}_{DateTime.Now:ddMMyyyy}_{things[0].student_Id}.txt";
 
                 // Combine the file name with the virtual directory path
                 string logFilePath = Path.Combine(_env.ContentRootPath,$"Group/Logs/{logFileName}");
-
+                Directory.CreateDirectory(Path.GetDirectoryName(logFilePath)!);
                 LogToFile(logFilePath, "Processing Razorpay started...(getArray1)");
 
 
                 det1.Clear();
 
-                decimal totalAmount = 0;
+                decimal? totalAmount = 0;
                 string Udate1 = "";
                 decimal splitAmount1 = 0;
                 decimal splitAmount2 = 0;
@@ -594,7 +596,7 @@ namespace Preadmission_Lodha.Controllers
                     if (totalamt == 0) { return "Payable Amount is 0"; }
                     FeeEntrypreadmissionwebonline_pending(det1, data[data.Count - 1].transId.ToString(), things[0].student_Id, retData.order_id);
                     LogToFile(logFilePath, $"Redirecting to Payment gatewayy....");
-                    return JsonSerializer.Serialize(retData);
+                    return JsonSerializer.Serialize(JsonSerializer.Serialize(retData));
 
                 }
 
@@ -1065,6 +1067,641 @@ $"user_Name={r.user_Name}, ip_Address={r.ip_Address}, mode={r.mode}");
             //    }
             //}
             return 0.ToString();
+        }
+
+
+        [HttpPost("return_responsRazorpay1")]
+        public IActionResult return_responsRazorpay1()
+        {
+            int status;
+            var x = Request.Form;
+            int student_Id = int.Parse(x["student_Id"]);
+            int org_Id = int.Parse(x["org_Id"]);
+            // string logFilePath = $@"E:\Valaischool\Backendcode\School_04-11-2024\Group\Logs\RazorpayLogspreinstallment_{DateTime.Now:ddMMyyyy}_{student_Id}.txt";
+            string logFileName = $"RazorpayLogspreinstallment_{org_Id}_{DateTime.Now:ddMMyyyy}_{student_Id}.txt";
+
+            // Combine the file name with the virtual directory path
+            string logFilePath = Path.Combine(_env.ContentRootPath, $"Group/Logs/{logFileName}");
+            try
+            {
+
+                // Log request details
+                LogToFile(logFilePath, "Processing Razorpay response...(return_responsRazorpay1)");
+
+                List<string> tids = new List<string>();
+
+                var Udf = Convert.ToString(x["udf1"]);
+
+                Console.WriteLine(Udf);
+                var splitPerTran = Udf.Split('*');
+                foreach (var items in splitPerTran)
+                {
+                    var Tid = items.Split('-')[1];
+                    tids.Add(Tid);
+                }
+                LogToFile(logFilePath, $"Received data: Udf={Udf}");
+
+                string amount = Convert.ToString(x["amount"]);
+                string currency = Convert.ToString(x["currency"]);
+                string order_id = Convert.ToString(x["order_id"]);
+                string payment_datetime = Convert.ToString(x["payment_datetime"]);
+                string response_code = Convert.ToString(x["response_code"]);
+                string responseMessage = Convert.ToString(x["response_message"]);
+                string transaction_id = Convert.ToString(x["transaction_id"]);
+                string hashValue = x["hash"];
+                string provider = x["provider"];
+                //int org_Id = int.Parse(x["org_Id"]);
+                int academic_Id = int.Parse(x["academic_Id"]);
+                //int student_Id = int.Parse(x["student_Id"]);
+                int transac = Convert.ToInt32(x["order_id"]);//ewlly
+
+                LogToFile(logFilePath, $"Received data: OrderID={order_id}, Amount={amount}, ResponseCode={response_code},transaction_id={transaction_id}");
+                if (provider == "RAZORPAY")
+
+                {
+                    string transId = Convert.ToString(getTransId(org_Id, academic_Id, student_Id));
+
+                    if (tids.Contains(transId.ToString()))
+                    {
+                        SqlConnection conn = new SqlConnection(commonCode.conStr);
+                        SqlCommand cmd = new SqlCommand("Pro_2021_onlinePayment", conn);
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        //cmd.Parameters.Add("@msg", SqlDbType.NVarChar).Value = chesksumValue;
+                        cmd.Parameters.Add("@transaction_Id", SqlDbType.NVarChar).Value = order_id; //created in sql
+                        cmd.Parameters.Add("@payment_trans_Id", SqlDbType.NVarChar).Value = transaction_id;
+                        cmd.Parameters.Add("@payment_Vendor", SqlDbType.NVarChar).Value = "RAZORPAY";
+                        cmd.Parameters.Add("@merchant_id", SqlDbType.NVarChar).Value = order_id;
+                        cmd.Parameters.Add("@currency_Code", SqlDbType.NVarChar).Value = currency;
+                        cmd.Parameters.Add("@payment_status_Id", SqlDbType.NVarChar).Value = response_code;
+                        cmd.Parameters.Add("@transaction_status", SqlDbType.NVarChar).Value = responseMessage;
+                        cmd.Parameters.Add("@transaction_amount", SqlDbType.Decimal).Value = Convert.ToDecimal(amount);
+                        cmd.Parameters.Add("@transaction_Date", SqlDbType.DateTime).Value = payment_datetime;
+                        cmd.Parameters.Add("@mode", SqlDbType.NVarChar).Value = "INSERT_PAYMENT_TRANSACTION";
+                        conn.Open();
+                        List<OnlinePayment> data = new List<OnlinePayment>();
+                        DataSet ds = new DataSet();
+                        SqlDataAdapter da = new SqlDataAdapter();
+                        da.SelectCommand = cmd;
+                        da.Fill(ds);
+                        DataTable Dt = ds.Tables[0];
+                        conn.Close();
+                        LogToFile(logFilePath, "Stored procedure executed successfully.");
+                        data = commonCode.ConvertDataTable<OnlinePayment>(Dt);
+
+                        DataTable dt2 = getMailId2(data[0].org_Id, data[0].academic_Id, data[0].student_Id, "GETMAIL4");
+
+                        string email2 = dt2.Rows[0]["emailId"].ToString();
+                        string orgName = dt2.Rows[0]["orgName"].ToString();
+                        string leadName = dt2.Rows[0]["childName"].ToString();
+                        int classId = Convert.ToInt32(dt2.Rows[0]["class_Id"]);
+                        string className = dt2.Rows[0]["class_Name"].ToString();
+                        string applicationNumber = dt2.Rows[0]["application_Form_No"].ToString();
+                        DateTime today = DateTime.Today;
+                        TimeSpan currentTime = DateTime.Now.TimeOfDay;
+                        LogToFile(logFilePath, $"Received data: email={email2}, orgName={orgName}, leadName={leadName}, classId={classId}, className={className}, applicationNumber={applicationNumber}");
+
+
+                        //newlly
+                        List<CrudFeeReceiptModel> det1 = StudentTransactions(org_Id, transac, student_Id);
+
+
+                        // det[0].reference_Code = values[2].ToString();
+                        if (transaction_id != "" && response_code == "0")
+                        {
+                            foreach (var v in det1)
+                            {
+
+
+
+
+                                LogToFile(logFilePath, $"thingsdet item: " +
+            $"org_Id={v.org_Id}, " +
+            $"transactionId={v.transactionId}, " +
+            $"academic_Id={v.academic_Id}, " +
+            $"academic_Year={v.academic_Year}, " +
+            $"class_Name={v.class_Name}, " +
+            $"NewOrOld={v.NewOrOld}, " +
+            $"quota_id={v.quota_id}, " +
+            $"class_Id={v.class_Id}, " +
+            $"section_Id={v.section_Id}, " +
+            $"section_Name={v.section_Name}, " +
+            $"category_Id={v.category_Id}, " +
+            $"subCategory_Id={v.subCategory_Id}, " +
+            $"install1={v.install1}, " +
+            $"install2={v.install2}, " +
+            $"install3={v.install3}, " +
+            $"install4={v.install4}, " +
+            $"duration_Id={v.duration_Id}, " +
+            $"type_Id={v.type_Id}, " +
+            $"structure_Id={v.structure_Id}, " +
+            $"term={v.term}, " +
+            $"student_Id={v.student_Id}, " +
+            $"receipt_Id={v.receipt_Id}, " +
+            $"month_Id={v.month_Id}, " +
+            $"install_Id={v.install_Id}, " +
+            $"transId={v.transId}, " +
+            $"category_Name={v.category_Name}, " +
+            $"StudentName={v.StudentName}, " +
+            $"subCategory_Name={v.subCategory_Name}, " +
+            $"duration_Name={v.duration_Name}, " +
+            $"type_Name={v.type_Name}, " +
+            $"student_Code={v.student_Code}, " +
+            $"receipt_Code={v.receipt_Code}, " +
+            $"receipt_Mode={v.receipt_Mode}, " +
+            $"cheque_Number={v.cheque_Number}, " +
+            $"cheque_Date={v.cheque_Date}, " +
+            $"due_Date={v.due_Date}, " +
+            $"reference_Code={v.reference_Code}, " +
+            $"payment_Date={v.payment_Date}, " +
+            $"bank_Name={v.bank_Name}, " +
+            $"branch_Name={v.branch_Name}, " +
+            $"structure_Amount={v.structure_Amount}, " +
+            $"advance_Amount={v.advance_Amount}, " +
+            $"credit_Amount={v.credit_Amount}, " +
+            $"discount_Amount={v.discount_Amount}, " +
+            $"changedDiscountAmount={v.changedDiscountAmount}, " +
+            $"receipt_Amount={v.receipt_Amount}, " +
+            $"balance_Amount={v.balance_Amount}, " +
+            $"payable_Amount={v.payable_Amount}, " +
+            $"receipt_Date={v.receipt_Date}, " +
+            $"bal_CreditAmount={v.bal_CreditAmount}, " +
+            $"receipt_Remark={v.receipt_Remark}, " +
+            $"fine_Amount={v.fine_Amount}, " +
+            $"additional_Charge={v.additional_Charge}, " +
+            $"receipt_Cancel={v.receipt_Cancel}, " +
+            $"cancel_Date={v.cancel_Date}, " +
+            $"status={v.status}, " +
+            $"user_Name={v.user_Name}, " +
+            $"ip_Address={v.ip_Address}, " +
+            $"mode={v.mode}, " +
+            $"dd_Number={v.dd_Number}, " +
+            $"dd_Date={v.dd_Date}, " +
+            $"admission_No={v.admission_No}, " +
+            $"father_Name={v.father_Name}, " +
+            $"amount={v.amount}, " +
+            $"Payment_Status={v.Payment_Status}, " +
+            $"mobileNumber={v.mobileNumber}, " +
+            $"zipCode={v.zipCode}, " +
+            $"URLAuth1={v.URLAuth1}, " +
+            $"description={v.description}, " +
+            $"email={v.email}, " +
+            $"city={v.city}");
+
+
+                                if (v.student_Id == data[0].student_Id)//&& tids.Contains(v.transactionId.ToString()))
+                                {
+                                    v.Payment_Status = "success";
+                                    v.order_id = transaction_id;
+                                    v.trans_id = transac;
+                                    LogToFile(logFilePath, "det Payment success.");
+                                }
+                            }
+                            FeeEntrypre(det1, Convert.ToString(order_id), data[0].student_Id);
+                            LogToFile(logFilePath, $"Received data(FeeEntrypre): org_Id={data[0].org_Id}, academic_Id={data[0].academic_Id}, order_id={Convert.ToString(order_id)}, student_Id={data[0].student_Id}");
+                            UpdatePreAdmissionAdminStatus(data[0].org_Id, data[0].student_Id, data[0].academic_Id);
+                            LogToFile(logFilePath, $"Received data(UpdatePreAdmissionAdminStatus): org_Id={data[0].org_Id}, academic_Id={data[0].academic_Id}, student_Id={data[0].student_Id}");
+
+                            SendSeatBookedStatusEmail(email2, data[0].org_Id, today, currentTime, orgName, leadName, 0, classId, className, applicationNumber);
+                            LogToFile(logFilePath, $"Received data(SendSeatBookedStatusEmail): org_Id={data[0].org_Id}, academic_Id={data[0].academic_Id}, applicationNumber={applicationNumber}");
+
+                            // status = 1;// success payment
+                        }
+                        else
+                        {
+
+                            for (int i = det1.Count - 1; i >= 0; i--)
+                            {
+                                if (det1[i].student_Id == data[0].student_Id)
+                                {
+                                    det1.RemoveAt(i);
+                                }
+                            }
+                            LogToFile(logFilePath, "failure payment.");
+                            //status = 0; // failure payment
+                        }
+                    }
+                    else
+                    {
+                        SqlConnection conn = new SqlConnection(commonCode.conStr);
+                        SqlCommand cmd = new SqlCommand("Pro_2021_onlinePayment", conn);
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        //cmd.Parameters.Add("@msg", SqlDbType.NVarChar).Value = chesksumValue;
+                        cmd.Parameters.Add("@transaction_Id", SqlDbType.NVarChar).Value = order_id; //created in sql
+                        cmd.Parameters.Add("@payment_trans_Id", SqlDbType.NVarChar).Value = transaction_id;
+                        cmd.Parameters.Add("@payment_Vendor", SqlDbType.NVarChar).Value = "RAZORPAY1";
+                        cmd.Parameters.Add("@merchant_id", SqlDbType.NVarChar).Value = order_id;
+                        cmd.Parameters.Add("@currency_Code", SqlDbType.NVarChar).Value = currency;
+                        cmd.Parameters.Add("@payment_status_Id", SqlDbType.NVarChar).Value = response_code;
+                        cmd.Parameters.Add("@transaction_status", SqlDbType.NVarChar).Value = responseMessage;
+                        cmd.Parameters.Add("@transaction_amount", SqlDbType.Decimal).Value = Convert.ToDecimal(amount);
+                        cmd.Parameters.Add("@transaction_Date", SqlDbType.DateTime).Value = payment_datetime;
+                        cmd.Parameters.Add("@mode", SqlDbType.NVarChar).Value = "INSERT_PAYMENT_TRANSACTION";
+                        conn.Open();
+                        List<OnlinePayment> data = new List<OnlinePayment>();
+                        DataSet ds = new DataSet();
+                        SqlDataAdapter da = new SqlDataAdapter();
+                        da.SelectCommand = cmd;
+                        da.Fill(ds);
+                        DataTable Dt = ds.Tables[0];
+                        conn.Close();
+                        LogToFile(logFilePath, "transId is not Contain in tids - contact developer.");
+                        //data = commonCode.ConvertDataTable<OnlinePayment>(Dt);
+                        status = 3; // No matched transaction and failure payment 
+                    }
+
+                }
+
+                var response = new HttpResponseMessage();
+
+                string body = @"<body>
+<table>
+    <tr><td>Amount</td><td> @@amount@@</td></tr>
+    <tr><td>Trans Id</td><td> @@TransId@@</td></tr>
+    <tr><td>Trans Status</td><td> @@Status@@</td></tr>
+    <tr><td>You will be automatically redirected to the website in 10 seconds, if not kindly click </td><td><a href='@@redirectUrl@@'>Back to Website</a></td></tr>
+</table>
+</body>
+<script>
+setTimeout(function(){ 
+    window.location.href='@@redirectUrl@@'
+}, 10000);
+</script>";
+
+                // Determine the redirect URL based on org_Id
+                string redirectUrl = org_Id == 213
+                    ? "https://applyonline.lodhaoakwoodschool.com/dashboard"
+                    : "https://applyonline.lodhaworldschool.com/dashboard";
+
+                // Replace placeholders in the email body
+                body = body.Replace("@@amount@@", Convert.ToDecimal(amount).ToString());
+                body = body.Replace("@@TransId@@", Convert.ToString(transaction_id));
+                body = body.Replace("@@Status@@", responseMessage);
+                body = body.Replace("@@redirectUrl@@", redirectUrl);
+
+                return Content(body, "text/html");
+            }
+            catch (Exception ex)
+            {
+                LogToFile(logFilePath, $"Error occurred: {ex.Message} | StackTrace: {ex.StackTrace}");
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            }
+        }
+
+        [HttpGet("getTransId")]
+        private int getTransId(int orgId, int academicId, int studentId)
+        {
+            int transId = 0;
+            SqlConnection conn = new SqlConnection(commonCode.conStr);
+            conn.Open();
+            SqlCommand cmd = new SqlCommand("Pro_2021_onlinePayment", conn);
+            cmd.CommandType = CommandType.StoredProcedure;
+            cmd.Parameters.Add("@org_Id", SqlDbType.Int).Value = orgId;
+            cmd.Parameters.Add("@academic_Id", SqlDbType.Int).Value = academicId;
+            cmd.Parameters.Add("@student_Id", SqlDbType.Int).Value = studentId;
+            cmd.Parameters.Add("@mode", SqlDbType.NVarChar).Value = "GETTRANSID";
+
+            transId = Convert.ToInt32(cmd.ExecuteScalar());
+            conn.Close();
+            return (int)transId;
+        }
+
+        [HttpGet("getMailId2")]
+        public DataTable getMailId2(int OrgId, int AcademicId, int StudentId, string mode)
+        {
+
+            SqlConnection conn = new SqlConnection(commonCode.conStr);
+            SqlCommand cmd = new SqlCommand("pre_Admission_Pro", conn);
+            cmd.CommandType = CommandType.StoredProcedure;
+            cmd.Parameters.Add("@org_Id", SqlDbType.Int).Value = OrgId;
+            cmd.Parameters.Add("@academic_Id", SqlDbType.Int).Value = AcademicId;
+            cmd.Parameters.Add("@StudentId", SqlDbType.Int).Value = StudentId;
+            cmd.Parameters.Add("@mode", SqlDbType.NVarChar).Value = mode;
+
+
+            DataSet ds = new DataSet();
+            SqlDataAdapter da = new SqlDataAdapter();
+            da.SelectCommand = cmd;
+            da.Fill(ds);
+            DataTable Dt = ds.Tables[0];
+            conn.Close();
+            return Dt;
+        }
+
+        [HttpGet("StudentTransactions")]
+        public List<CrudFeeReceiptModel> StudentTransactions(int org_Id, int transactionId, int student_Id)
+        {
+            try
+            {
+                SqlConnection con = new SqlConnection(commonCode.conStr);
+                con.Open();
+                SqlCommand cmd = new SqlCommand("SP_ManageStudentTransaction", con);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@org_Id", SqlDbType.Int).Value = org_Id;
+                cmd.Parameters.Add("@transactionId", SqlDbType.Int).Value = transactionId;
+                cmd.Parameters.Add("@student_Id", SqlDbType.Int).Value = student_Id;
+                cmd.Parameters.Add("@Action", SqlDbType.NVarChar).Value = "GET";
+                List<CrudFeeReceiptModel> getdetail = new List<CrudFeeReceiptModel>();
+
+                DataSet ds = new DataSet();
+                SqlDataAdapter da = new SqlDataAdapter();
+                da.SelectCommand = cmd;
+                da.Fill(ds);
+                DataTable Dt = ds.Tables[0];
+                con.Close();
+                getdetail = commonCode.ConvertDataTable<CrudFeeReceiptModel>(Dt);
+                return getdetail;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.Message);
+            }
+
+        }
+
+        [NonAction]
+        public string FeeEntrypre(List<CrudFeeReceiptModel> feeArray, string refCode, int studentId)
+        {
+            FeeCommonController feco = new FeeCommonController();
+
+            decimal totalPayableAmt = 0;
+            FeeCommonController f = new FeeCommonController();
+            int receiptCode = 0;
+            List<getFeeReceiptCodeModel> receipt = feco.getFeeReceiptCode(feeArray[0].org_Id, "RECEIPT_NO");
+            receiptCode = receipt[0].receipt_Code;
+            foreach (var n in feeArray)
+            {
+                if ((n.student_Id == studentId) && (n.Payment_Status == "success"))
+                {
+                    var t = n;
+
+                    if (t.org_Id != null && t.student_Id == studentId)
+                    {
+                        if (t.payable_Amount > 0)
+                        {
+                            CrudFeeDiscountModel s = new CrudFeeDiscountModel();
+                            s.org_Id = t.org_Id;
+                            s.academic_Id = t.academic_Id;
+                            s.category_Id = t.category_Id;
+                            s.subCategory_Id = t.subCategory_Id;
+                            s.duration_Id = t.duration_Id;
+                            s.type_Id = t.type_Id;
+                            s.structure_Id = t.structure_Id;
+                            s.student_Id = t.student_Id;
+                            s.discount_Id = 0;
+                            s.discount_Type = 1;
+                            s.discount_Amount = t.changedDiscountAmount;
+                            s.discount_Date = DateTime.Now;
+                            s.discount_Reason = "Single payment";
+                            s.structure_Amount = t.structure_Amount;
+                            s.receipt = receiptCode;
+                            s.status = 1;
+                            s.month_Id = t.month_Id;
+                            s.user_Name = t.user_Name != null ? t.user_Name : "";
+                            s.ip_Address = t.ip_Address != null ? t.ip_Address : "";
+                            s.mode = t.duration_Id > 2 ? "CREATE" : "CREATEMONTHLY";
+                            var a = f.crudFeeDiscountMaster(s);
+                            CrudFeeReceiptModel r = new CrudFeeReceiptModel();
+                            r.org_Id = t.org_Id;
+                            r.academic_Id = t.academic_Id;
+                            r.class_Id = t.class_Id;
+                            r.quota_id = t.quota_id;
+                            r.NewOrOld = t.NewOrOld;
+                            r.duration_Id = t.duration_Id;
+                            r.type_Id = t.type_Id;
+                            r.structure_Id = t.structure_Id;
+                            r.student_Id = t.student_Id;
+                            r.receipt_Id = t.receipt_Id;
+                            r.student_Code = t.student_Code;
+                            r.receipt_Code = receiptCode.ToString();
+                            r.receipt_Mode = "3";
+                            r.cheque_Number = t.cheque_Number != null ? t.cheque_Number : "";
+                            r.cheque_Date = t.cheque_Date != DateTime.MinValue ? t.cheque_Date : DateTime.Now;
+                            r.dd_Number = t.dd_Number != null ? t.dd_Number : "";
+                            r.dd_Date = t.dd_Date != null ? t.dd_Date : DateTime.Now;
+                            r.reference_Code = refCode != null ? refCode : "";
+                            r.payment_Date = t.payment_Date != DateTime.MinValue ? t.payment_Date : DateTime.Now;
+                            r.bank_Name = t.bank_Name != null ? t.bank_Name : "";
+                            r.branch_Name = t.branch_Name != null ? t.branch_Name : "";
+                            r.month_Id = t.month_Id;
+                            r.payable_Amount = t.payable_Amount;
+                            r.bal_CreditAmount = t.bal_CreditAmount;
+                            r.balance_Amount = t.balance_Amount;
+                            r.structure_Amount = t.structure_Amount;
+                            r.discount_Amount = t.discount_Amount;
+                            r.receipt_Amount = t.payable_Amount;
+                            r.receipt_Date = DateTime.Now;
+                            r.receipt_Remark = t.receipt_Remark != null ? t.receipt_Remark : "";
+                            r.fine_Amount = t.fine_Amount;
+                            r.additional_Charge = t.additional_Charge;
+                            r.receipt_Cancel = t.receipt_Cancel;
+                            r.cancel_Date = t.cancel_Date != DateTime.MinValue ? t.cancel_Date : DateTime.Now;
+                            r.status = 1;
+                            r.user_Name = t.user_Name != null ? t.user_Name : "";
+                            r.ip_Address = t.ip_Address != null ? t.ip_Address : "";
+                            r.mode = t.month_Id == 0 ? "CREATE" : "MONTHLYCREATE";
+                            r.trans_id = t.trans_id;
+                            r.order_id = t.order_id;
+                            var b = f.crudMonthlyFeeReceiptMaster(r);
+                            totalPayableAmt = totalPayableAmt + t.receipt_Amount;
+
+                            //new code
+                            crudAccountsPostingModel1 ap2 = new crudAccountsPostingModel1();
+                            ap2.org_Id = feeArray[0].org_Id;
+                            ap2.receipt_Date = DateTime.Now;
+                            ap2.transCode = 1;
+                            ap2.transType = "Receipt";
+                            ap2.accountsCode = 9;
+                            ap2.credit_Amount = totalPayableAmt;//feeArray[0].amount;
+                            ap2.debit_Amount = 0;
+                            ap2.typeId = t.type_Id;
+                            ap2.academicId = t.academic_Id;
+                            ap2.directOrIndirect = 1;
+
+                            ap2.receipt_Code = receiptCode.ToString();
+                            ap2.student_Id = feeArray[0].student_Id;
+                            ap2.structure_Id = t.structure_Id;  //Tamil
+                            ap2.class_Id = t.class_Id;  //Tamil
+                            var acc2 = f.crudAccountsPostingNew1(ap2);
+                        }
+                    }
+
+                }
+            }
+
+            CreditNoteController c = new CreditNoteController();
+            List<CreditNote> creditAmt = c.getStudentDetail(feeArray[0].org_Id, feeArray[0].student_Id, "FEECOLLECTIONCREDITNOTE");
+            decimal creditAmount = creditAmt[0].advance_Amount;
+            decimal balCreditAmount = 0;
+            if (creditAmount > 0)
+            {
+                if (creditAmount < totalPayableAmt)
+                {
+                    balCreditAmount = 0;
+                }
+                else if (creditAmount > totalPayableAmt)
+                {
+                    balCreditAmount = (creditAmount - totalPayableAmt);
+                }
+                CrudFeeReceiptModel p = new CrudFeeReceiptModel();
+                p.org_Id = feeArray[0].org_Id;
+                p.student_Id = feeArray[0].student_Id;
+                p.bal_CreditAmount = balCreditAmount;
+                p.mode = "UPDATECREDITAMOUNT";
+                var b = f.updateCreditNote(p);
+            }
+            crudAccountsPostingModel ap = new crudAccountsPostingModel();
+            ap.org_Id = feeArray[0].org_Id;
+            ap.receipt_Date = DateTime.Now;
+            ap.transCode = 1;
+            ap.transType = "Receipt";
+            ap.accountsCode = 9;
+            ap.credit_Amount = feeArray[0].amount;
+            ap.debit_Amount = 0;
+            ap.receipt_Code = receiptCode.ToString();
+            ap.student_Id = feeArray[0].student_Id;
+            var acc = f.crudAccountsPosting(ap);
+            for (int i = feeArray.Count - 1; i >= 0; i--)
+            {
+                if (feeArray[i].student_Id == studentId)
+                {
+                    feeArray.RemoveAt(i);
+                }
+            }
+            return 0.ToString();
+        }
+
+        [HttpPost]
+        public string UpdatePreAdmissionAdminStatus(int org_Id, int student_Id, int academic_Id)
+        {
+            SqlConnection conn = new SqlConnection(commonCode.conStr);
+            SqlCommand cmd = new SqlCommand("pre_Admission_Pro", conn);
+            cmd.CommandType = CommandType.StoredProcedure;
+            cmd.Parameters.Add("@org_Id", SqlDbType.Int).Value = org_Id;
+            cmd.Parameters.Add("@academic_Id", SqlDbType.Int).Value = academic_Id;
+            cmd.Parameters.Add("@StudentId", SqlDbType.Int).Value = student_Id;
+            cmd.Parameters.Add("@mode", SqlDbType.NVarChar).Value = "INSERTAPPADMOFFACTION2";
+
+            conn.Open();
+            string n = cmd.ExecuteNonQuery().ToString();
+            conn.Close();
+            return n;
+        }
+        //ravi end
+
+        ///end
+        [NonAction]
+        private int SendSeatBookedStatusEmail(string email, int org_Id, DateTime visitDate, TimeSpan visitTime, string orgName, string leadName, int status_Id, int classId, string className, string applicationNumber)
+        {
+            try
+            {
+                using (SmtpClient smtpClient = new SmtpClient("smtp.gmail.com"))
+                //userData.StatusId == 14 || userData.StatusId == 13 || userData.StatusId == 9 || userData.StatusId == 12 || userData.StatusId == 3
+
+                {
+                    string mail = "", code = "";
+
+                    if (org_Id == 210) { mail = "admission_lsg@lodhaworldschool.com"; code = "xnyfofrvrrrhmakf"; }
+                    else if (org_Id == 211) { mail = "admission_thane@lodhaworldschool.com"; code = "qbvsvbsyqbdtnkgr"; }
+                    else if (org_Id == 212) { mail = "admission_palava@lodhaworldschool.com"; code = "bqhlpnprmfojxiob"; }
+                    else if (org_Id == 214) { mail = "admission_taloja@lodhaworldschool.com"; code = "ipqk qhxl eoiz pirp"; }
+                    else if (org_Id == 213) { mail = "admissions@lodhaoakwoodschool.com"; code = "ytjnwukgnjsjpfiq"; }
+                    else if (org_Id == 223) { mail = "admission_premier@lodhaworldschool.com"; code = "bcsciuavccudfmbl"; }
+
+
+
+                    smtpClient.UseDefaultCredentials = false;
+                    //smtpClient.Credentials = new NetworkCredential("enquiryevalai@gmail.com", "vgvj vqpj inov ntbo");
+                    smtpClient.Credentials = new NetworkCredential(mail, code);
+                    smtpClient.Port = 587;
+                    smtpClient.EnableSsl = true;
+
+                    System.Net.Mail.MailMessage mailMessage = new System.Net.Mail.MailMessage();
+                    mailMessage.From = new MailAddress(mail);
+                    mailMessage.To.Add(email);
+
+                    string body = $@"
+<html>
+<head>
+    <style>
+        /* Add any CSS styling here */
+    </style>
+</head>
+<body>
+    <p>Dear Parent/Guardian,</p>
+    <p>Greetings from {orgName}!</p>";
+
+                    if (org_Id != 213)
+                    {
+                        mailMessage.Subject = $"Seat Confirmed – Welcome to Lodha World School!";
+                        body += $@"
+                 <p>We are delighted to welcome you and your child to {orgName}!</p>
+    <p>At Lodha World School, we believe that every child is born with unique abilities, and when nurtured with love, respect, and trust, those abilities flourish. Here, your child will experience an education that fosters collaboration, creativity, experimentation, and innovation – without comparison or limitation.</p>
+    <p>As part of our mission to create the Leaders of Tomorrow, we are committed to nurturing global citizens who are passionate about bettering the world around them. Join us in this exciting journey as we prepare our young learners to take flight, soaring to new heights with curiosity, ambition, and joy in their hearts.</p>
+    <p>We value your feedback! To help us continue improving our admissions process and overall experience, kindly take a moment to share your thoughts by clicking this link - <a href=""https://forms.gle/J9XWerEVLYDmVwLD7"">Feedback Form</a>.</p>
+    <p>We will be sharing your child’s unique ID, email, and other details shortly. Information on procuring books and uniforms will also be provided closer to the start of the school year.</p>
+    <p>We look forward to embarking on this journey toward excellence together!</p>
+    <p>Warm Regards,<br><br>Admissions Team<br>{orgName}</p>";
+
+                    }
+                    if (org_Id == 213)
+                    {
+                        mailMessage.Subject = $"Seat Confirmed – Welcome to Lodha Oakwood School!";
+                        body += $@"
+<p>We are delighted to welcome you and your child to Lodha Oakwood School!</p>
+<p>At Lodha Oakwood School, we believe that every child is born with unique abilities and aim to maximize that potential, whether in academics or beyond. Here, your child will experience an education that fosters collaboration, creativity, experimentation, and innovation – without comparison or limitation.</p>
+<p>As part of our mission to deliver the highest level of academic excellence, we are committed to nurturing global citizens who are passionate about bettering the world around them. Join us in this exciting journey as we prepare our young learners to take flight, soaring to new heights with curiosity, ambition, and joy in their hearts.</p>
+<p>We value your feedback! To help us continue improving our admissions process and overall experience, kindly take a moment to share your thoughts by clicking this link - <a href=""https://forms.gle/NeuzLYbLMbRwRfkcA""</a>.</p>
+<p>We will be sharing your child’s unique ID, email, and other details shortly. Information on procuring books and uniforms will also be provided closer to the start of the school year.</p>
+<p>We look forward to embarking on this journey toward excellence together!</p>
+<p>Warm Regards,<br><br>Admissions Team<br>Lodha Oakwood School</p>";
+                    }
+
+                    body += @"
+<img src=""cid:logo"" alt=""Logo"" />
+</body>
+</html>";
+
+                    mailMessage.IsBodyHtml = true;
+                    mailMessage.Body = body;
+
+
+                    if (org_Id != 213)
+                    {
+                        string imagePath = "Group/210/maillogo/logo.png";
+                        string fullPath = Path.Combine(_env.ContentRootPath, imagePath);
+                        LinkedResource logoResource = new LinkedResource(fullPath, MediaTypeNames.Image.Jpeg);
+                        logoResource.ContentId = "logo";
+
+                        AlternateView alternateView = AlternateView.CreateAlternateViewFromString(body, null, MediaTypeNames.Text.Html);
+                        alternateView.LinkedResources.Add(logoResource);
+                        mailMessage.AlternateViews.Add(alternateView);
+
+                        smtpClient.Send(mailMessage);
+                    }
+                    else if (org_Id == 213)
+                    {
+                        string imagePath = "Group/210/maillogo/logooak.jpg";
+                        string fullPath = Path.Combine(_env.ContentRootPath,imagePath);
+                        LinkedResource logoResource = new LinkedResource(fullPath, MediaTypeNames.Image.Jpeg);
+                        logoResource.ContentId = "logo";
+
+                        AlternateView alternateView = AlternateView.CreateAlternateViewFromString(body, null, MediaTypeNames.Text.Html);
+                        alternateView.LinkedResources.Add(logoResource);
+                        mailMessage.AlternateViews.Add(alternateView);
+
+                        smtpClient.Send(mailMessage);
+                    }
+
+                    return 1;
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the error details
+                Console.WriteLine(ex.Message);
+                Console.WriteLine(ex.StackTrace);
+                return 0; // Email sending failed
+            }
         }
 
     }

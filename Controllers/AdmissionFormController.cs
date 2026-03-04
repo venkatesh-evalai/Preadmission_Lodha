@@ -29,7 +29,7 @@ namespace Preadmission_Lodha.Controllers
             {
 
                 //int studid = student_Id;
-                AdditionalController additional = new AdditionalController();
+                AdditionalController additional = new AdditionalController(_env);
 
 
 

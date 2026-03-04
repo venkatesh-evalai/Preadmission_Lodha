@@ -141,7 +141,7 @@ namespace Preadmission_Lodha.Controllers
                     parent_name = row.Field<string>("parent_name") ?? "";
                     parentLastname = row.Field<string>("parentLastname") ?? "";
                     father_Email = row.Field<string>("father_Email") ?? "";
-                    date_Of_Birth = row.Field<DateTime>("date_Of_Birth").ToString("dd-MM-yyyy") ?? "";
+                    date_Of_Birth = row.Field<DateTime?>("date_Of_Birth")?.ToString("dd-MM-yyyy") ?? "";
 
                     gender = row.Field<string>("gender") ?? "";
                     place_Of_Birth = row.Field<string>("place_Of_Birth") ?? "";
@@ -160,7 +160,7 @@ namespace Preadmission_Lodha.Controllers
                     Category = row.Field<string>("Category") ?? "";
                     Grade = row.Field<string>("Grade") ?? "";
                     PreviouslyLWS = row.Field<string>("PreviouslyLWS") ?? "";
-                    previousdateofapp = row.Field<DateTime>("previousdateofapp").ToString("dd-MM-yyyy") ?? "";
+                    previousdateofapp = row.Field<DateTime?>("previousdateofapp")?.ToString("dd-MM-yyyy") ?? "";
                     PresentSchoolAttended = row.Field<string>("PresentSchoolAttended") ?? "";
                     PresentSchoolGrade = row.Field<string>("PresentSchoolGrade") ?? "";
 
@@ -225,7 +225,7 @@ namespace Preadmission_Lodha.Controllers
                     Referencerelationwithstudent = row.Field<string>("Referencerelationwithstudent") ?? "";
                     applicant_name = row.Field<string>("applicant_name") ?? "";
                     declarationPlace = row.Field<string>("declarationPlace") ?? "";
-                    declarationDate = row.Field<DateTime>("declarationDate").ToString("dd-MM-yyyy") ?? "";//row.Field<string>("declarationDate") ?? "";
+                    declarationDate = row.Field<DateTime?>("declarationDate")?.ToString("dd-MM-yyyy") ?? "";//row.Field<string>("declarationDate") ?? "";
 
                     lastschool = row.Field<string>("last_School") ?? "";
                     siblingage = row.Field<string>("sib_Age") ?? "";
@@ -306,6 +306,7 @@ namespace Preadmission_Lodha.Controllers
 
                 string filename = "AdmissionForm" + "-" + leadid + ".pdf";
                 savefilefor2 = Path.Combine(_env.ContentRootPath,"Group/AdmissionForm/output/");
+                Directory.CreateDirectory(savefilefor2);
                 //dirfordelete = HttpContext.Current.Server.MapPath("~/Group/ReportCard/" + org_Id + "/ReportCardOutput/");
 
                 void DrawWrappedText(XGraphics g, string inputtext, XFont inputfont, XBrush brush, XRect rect, double inputmaxWidth, int maxLines, double lineHeight)

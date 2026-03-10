@@ -79,7 +79,7 @@ namespace Preadmission_Lodha.Controllers
             return FeeReceiptCode;
         }
 
-        [HttpPost]
+        [HttpPost("crudMonthlyFeeReceiptMaster")]
         public bool crudMonthlyFeeReceiptMaster(CrudFeeReceiptModel feeRcpt)
         {
             SqlConnection conn = new SqlConnection(commonCode.conStr);
@@ -145,7 +145,7 @@ namespace Preadmission_Lodha.Controllers
         }
 
 
-        [HttpPost]
+        [HttpPost("LogTextFile")]
         public void LogTextFile(int orgId, int org_Id, int academic_Id, int category_Id, int subCategory_Id, int duration_Id, int type_Id, int structure_Id, int student_Id, int receipt_Id, string student_Code,
            string receipt_Code, string receipt_Mode, string cheque_Number, DateTime cheque_Date, DateTime dd_Date, DateTime payment_Date, string bank_Name, string branch_Name,
            int month_Id, decimal payable_Amount, decimal bal_CreditAmount, decimal balance_Amount, decimal structure_Amount, decimal discount_Amount, decimal receipt_Amount,

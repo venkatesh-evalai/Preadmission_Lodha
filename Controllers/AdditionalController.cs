@@ -1910,5 +1910,162 @@ Summary of Mother with the child’s blood group mentioned</li>
             }
         }
 
+        [HttpPost("InsertUserData2")]
+        public CommonModal InsertUserData2(UserDataModel userData)
+        {
+
+            CommonModal e1 = new CommonModal();
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(commonCode.conStr))
+                {
+                    conn.Open();
+
+                    using (SqlCommand cmd = new SqlCommand("pre_Admission_Pro", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+
+                        string otp = GenerateNewRandom();
+                        cmd.Parameters.Add("@ParentFirstName", SqlDbType.NVarChar).Value = userData.FirstName;
+                        cmd.Parameters.Add("@ParentLastName", SqlDbType.NVarChar).Value = userData.LastName;
+                        cmd.Parameters.Add("@ParentEmail", SqlDbType.NVarChar).Value = userData.EmailId;
+                        cmd.Parameters.Add("@CountryCode", SqlDbType.NVarChar).Value = userData.CountryCode;
+                        cmd.Parameters.Add("@Mobile", SqlDbType.NVarChar).Value = userData.MobileNo;
+                        cmd.Parameters.Add("@org_Id", SqlDbType.Int).Value = userData.OrgId;
+                        cmd.Parameters.Add("@type", SqlDbType.NVarChar).Value = userData.Type;
+                        cmd.Parameters.Add("@OTP", SqlDbType.NVarChar).Value = otp;
+                        cmd.Parameters.Add("@mode", SqlDbType.NVarChar).Value = "INSERT2";
+
+                        string n = cmd.ExecuteScalar()?.ToString();
+
+                        if (n == "Inserted")
+                        {
+                            for (int i = 0; i < userData.No_Of_Child; i++)
+                            {
+
+                                InsertChildData(userData.OrgId, userData.MobileNo, userData.Children[i]);
+                            }
+                            string msg = $"Your One Time Password (OTP) for login is {otp}, provided by SITABEN SHAH MEMORIAL TRUST";
+                            int status = SendOTPEmail(userData.EmailId, userData.OrgId, otp, userData.Type, "New User");
+                            int status1 = SendOTPMobile(userData.OrgId, userData.MobileNo, msg);
+                            if (status == 1 || status1 == 1)
+                            {
+                                e1.ResponseStatus = "True";
+                                e1.ResponseCode = "200";
+                                e1.ResponseMessage = "OTP sent successfully!!";
+                                e1.data = new DataTable();
+                                e1.data.Columns.Add("MobileNumber", typeof(string));
+                                e1.data.Rows.Add(userData.MobileNo);
+                            }
+                            else
+                            {
+                                e1.ResponseStatus = "False";
+                                e1.ResponseCode = "1027";
+                                e1.ResponseMessage = "Error sending OTP";
+                                e1.data = new DataTable();
+                            }
+                        }
+                        else if (n == "RESENT")
+                        {
+                            string msg = $"Your One Time Password (OTP) for login is {otp}, provided by SITABEN SHAH MEMORIAL TRUST";
+                            int OrgId = 213;
+                            string EmailId = getMailId(OrgId, userData.MobileNo, "GETMAILOAK");
+                            int status = SendOTPEmail(EmailId, OrgId, otp, userData.Type, "Existed User");
+                            int status1 = SendOTPMobile(OrgId, userData.MobileNo, msg);
+                            if (status == 1 || status1 == 1)
+                            {
+                                e1.ResponseStatus = "True";
+                                e1.ResponseCode = "200";
+                                e1.ResponseMessage = "OTP Resent";
+                                e1.data = new DataTable();
+                                e1.data.Columns.Add("MobileNumber", typeof(string));
+                                e1.data.Rows.Add(userData.MobileNo);
+                            }
+                            else
+                            {
+                                e1.ResponseStatus = "False";
+                                e1.ResponseCode = "1027";
+                                e1.ResponseMessage = "Error sending OTP";
+                                e1.data = new DataTable();
+                            }
+                        }
+                        else if (n == "Updated")
+                        {
+                            string msg = $"Your One Time Password (OTP) for login is {otp}, provided by SITABEN SHAH MEMORIAL TRUST";
+                            int OrgId = 213;
+                            string EmailId = getMailId(OrgId, userData.MobileNo, "GETMAILOAK");
+                            int status = SendOTPEmail(EmailId, OrgId, otp, userData.Type, "Existed User");
+                            int status1 = SendOTPMobile(OrgId, userData.MobileNo, msg);
+
+                            if (status == 1 || status1 == 1)
+                            {
+                                e1.ResponseStatus = "True";
+                                e1.ResponseCode = "200";
+                                e1.ResponseMessage = "OTP sent successfully!!";
+                                e1.data = new DataTable();
+                                e1.data.Columns.Add("MobileNumber", typeof(string));
+                                e1.data.Rows.Add(userData.MobileNo);
+                            }
+                            else
+                            {
+                                e1.ResponseStatus = "False";
+                                e1.ResponseCode = "1027";
+                                e1.ResponseMessage = "Error sending OTP";
+                                e1.data = new DataTable();
+                            }
+                        }
+                        else
+                        {
+
+                            e1.ResponseStatus = "False";
+                            e1.ResponseCode = "1027";
+                            e1.ResponseMessage = n;
+                            e1.data = new DataTable();
+                            e1.data.Columns.Add("MobileNumber", typeof(string));
+                            e1.data.Rows.Add(userData.MobileNo);
+
+                        }
+
+                        conn.Close();
+                    }
+                }
+            }
+            catch (SqlException sqlEx)
+            {
+                String msg = sqlEx.Message;
+                e1.ResponseStatus = "False";
+                e1.ResponseCode = "1027";
+                e1.ResponseMessage = msg;
+
+            }
+            catch (Exception ex)
+
+            {
+                String msg = ex.Message;
+                e1.ResponseStatus = "False";
+                e1.ResponseCode = "1027";
+                e1.ResponseMessage = msg;
+
+            }
+
+            return e1;
+        }
+
+        [HttpGet("AppCancellationRequest")]
+        public string AppCancellationRequest(int org_Id, int student_Id, int academic_Id, string mode)
+        {
+
+            SqlConnection conn = new SqlConnection(commonCode.conStr);
+            conn.Open();
+            SqlCommand cmd = new SqlCommand("pre_Admission_Pro", conn);
+            cmd.CommandType = CommandType.StoredProcedure;
+            cmd.Parameters.Add("@org_Id", SqlDbType.Int).Value = org_Id;
+            cmd.Parameters.Add("@StudentId", SqlDbType.Int).Value = student_Id;
+            cmd.Parameters.Add("@academic_Id", SqlDbType.Int).Value = academic_Id;
+            cmd.Parameters.Add("@mode", SqlDbType.NVarChar).Value = mode;
+            string n = cmd.ExecuteScalar().ToString();
+            conn.Close();
+            return n;
+        }
     }
 }

@@ -1603,7 +1603,7 @@ setTimeout(function(){
                     if (org_Id == 210) { mail = "admission_lsg@lodhaworldschool.com"; code = "xnyfofrvrrrhmakf"; }
                     else if (org_Id == 211) { mail = "admission_thane@lodhaworldschool.com"; code = "qbvsvbsyqbdtnkgr"; }
                     else if (org_Id == 212) { mail = "admission_palava@lodhaworldschool.com"; code = "bqhlpnprmfojxiob"; }
-                    else if (org_Id == 214) { mail = "admission_taloja@lodhaworldschool.com"; code = "ipqk qhxl eoiz pirp"; }
+                    else if (org_Id == 214) { mail = "admission_taloja@lodhaworldschool.com"; code =  "demf uobr xuxi iufs"; }
                     else if (org_Id == 213) { mail = "admissions@lodhaoakwoodschool.com"; code = "ytjnwukgnjsjpfiq"; }
                     else if (org_Id == 223) { mail = "admission_premier@lodhaworldschool.com"; code = "bcsciuavccudfmbl"; }
 

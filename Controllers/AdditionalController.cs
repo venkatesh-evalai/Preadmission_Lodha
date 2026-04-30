@@ -931,12 +931,12 @@ namespace Preadmission_Lodha.Controllers
                 data = commonCode.ConvertDataTable<OnlinePayment>(Dt);
                 if (things.org_Id == 212)
                 {
-                    data[0].apiKey = "rzp_live_qQE7inemMZTwMV";
-                    data[0].salt = "iyl6WFYskRBRWKqHyBmdEL6I";
-                    data[0].provider = "RAZORPAY"; // Example: Use "RAZORPAY" or other if required
-                    //data[0].apiKey = "rzp_test_W7w5DfMGU7APNC";
-                    //data[0].salt = "5E2xLFCISLt3m4R8buRRCSlq";
-                    //data[0].provider = "RAZORPAY";
+                    //data[0].apiKey = "rzp_live_qQE7inemMZTwMV";
+                    //data[0].salt = "iyl6WFYskRBRWKqHyBmdEL6I";
+                    //data[0].provider = "RAZORPAY"; // Example: Use "RAZORPAY" or other if required
+                    data[0].apiKey = "rzp_test_W7w5DfMGU7APNC";
+                    data[0].salt = "5E2xLFCISLt3m4R8buRRCSlq";
+                    data[0].provider = "RAZORPAY";
                 }
 
 

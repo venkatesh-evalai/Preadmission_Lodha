@@ -154,12 +154,12 @@ namespace Preadmission_Lodha.Controllers
                 }
 
                 data = commonCode.ConvertDataTable<OnlinePayment>(Dt);
-                // if (things[0].org_Id == 212)
-                //{
-                //    data[0].apiKey = "rzp_test_Bfjv3KifmtSU01";
-                //    data[0].salt = "brQ9h8ZDDBjo5wwj5ytMBvh8";
-                //    data[0].provider = "RAZORPAY"; // Example: Use "RAZORPAY" or other if required
-                //}
+                 if (things[0].org_Id == 212)
+                {
+                    data[0].apiKey = "rzp_test_Bfjv3KifmtSU01";
+                    data[0].salt = "brQ9h8ZDDBjo5wwj5ytMBvh8";
+                    data[0].provider = "RAZORPAY"; // Example: Use "RAZORPAY" or other if required
+                }
 
                 string logFileName = $"RazorpayLogspreinstallment_{things[0].org_Id}_{DateTime.Now:ddMMyyyy}_{things[0].student_Id}.txt";
 
